@@ -72,12 +72,10 @@
     "url": "https://github.com/zcorky/zodash/issues"
   },
   "dependencies": {
-    "@types/spark-md5": "^3.0.2",
     "@zodash/delay": "^0.0.16",
     "@zodash/next-tick": "^0.0.8",
     "@zodash/queue": "^0.0.7",
     "@zodash/strategy": "^0.0.6",
-    "@zodash/uuid": "^0.0.8",
-    "spark-md5": "^3.0.0"
+    "@zodash/uuid": "^0.0.8"
   }
 }
