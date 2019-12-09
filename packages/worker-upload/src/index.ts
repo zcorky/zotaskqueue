@@ -3,8 +3,14 @@ import { Worker } from '@zoupdown/core';
 import { md5, humanFileSize } from './utils';
 
 export interface Options {
+  url: string;
+  method?: string;
+  headers?: Headers;
+  data?: Record<string, string>;
   file: File;
 }
+
+const DEFAULT_METHOD = 'POST';
 
 export class UploadWorker extends Worker<Options> {
   // delegate file
@@ -75,10 +81,21 @@ export class UploadWorker extends Worker<Options> {
 
     // xhr.responseType = 'json';
 
+    const headers = this.options.headers || {};
+    for (const key in headers) {
+			xhr.setRequestHeader(key, headers[key]);
+		}
+
     const form = new FormData();
     form.append('file', this.options.file);
+    const data = this.options.data || {};
+    for (const key in data) {
+      form.append(key, data[key]);
+    }
 
-    xhr.open('POST', 'https://httpbin.zcorky.com/upload');
+    const url = this.options.url;
+    const method = this.options.method || DEFAULT_METHOD;
+    xhr.open(method, url);
 
     xhr.send(form);
   }
