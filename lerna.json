@@ -33,7 +33,8 @@
       "enchancement": ":rocket:(Enhancement)",
       "bug": ":bug:(Bug Fix)",
       "doc": ":doc:(Refine Doc)",
-      "feat": ":sparkles:(Feature)"
+      "feat": ":sparkles:(Feature)",
+      "chore": ":construction_worker:(Chore)"
     },
     "cacheDir": ".changelog"
   }
