@@ -1,22 +1,24 @@
 {
   "compilerOptions": {
     "module": "commonjs",
+    "moduleResolution": "node",
     "declaration": true,
     "noImplicitAny": false,
     "removeComments": true,
     "noLib": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es6",
+    "resolveJsonModule": true,
+    "target": "es2018",
     "sourceMap": true,
     "lib": [
-      "es6"
+      "es2018"
     ],
-    "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
       "@zoupdown/*": ["packages/*"]
-    }
+    },
+    "pretty": true,
   },
   "exclude": [
     "node_modules",
