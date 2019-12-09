@@ -217,10 +217,20 @@ export abstract class Worker<P = any> implements IWorker<P> {
   }
   
   public async pause() {
+    // if not status(pending + running), ignore
+    if (![STATUS.PENDING, STATUS.RUNNING].includes(this.status)) {
+      return ;
+    }
+
     alert('拼命开发中');
   }
   
   public async resume() {
+    // if not status(paused), ignore
+    if (this.status !== STATUS.PAUSED) {
+      return ;
+    }
+
     alert('拼命开发中');
   }
 

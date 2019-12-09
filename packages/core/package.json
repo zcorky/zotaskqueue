@@ -73,6 +73,7 @@
   },
   "dependencies": {
     "@zodash/delay": "^0.0.16",
+    "@zodash/event": "^0.0.9",
     "@zodash/next-tick": "^0.0.8",
     "@zodash/queue": "^0.0.7",
     "@zodash/strategy": "^0.0.6",
