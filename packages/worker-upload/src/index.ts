@@ -13,7 +13,7 @@ export class UploadWorker extends Worker<Options> {
   public readonly lastModified = this.options.file.lastModified;
   public readonly md5: string | null = null;
 
-  private readonly xhr?: XMLHttpRequest | null;
+  private readonly xhr: XMLHttpRequest | null;
 
   constructor(options: Options) {
     super(options);
@@ -95,10 +95,10 @@ export class UploadWorker extends Worker<Options> {
 
 
   public get progressHuman() {
-    return this.progress === 0 ? '-' : (this.progress * 100).toFixed(2) + '%';
+    return this.progress === 0 ? '-' : `${(this.progress * 100).toFixed(2)}%`;
   }
 
   public get speedHuman() {
-    return this.speed === 0 ? '-' : humanFileSize(this.speed.toFixed(2), true) + '/s';
+    return this.speed === 0 ? '-' : `${humanFileSize(this.speed.toFixed(2), true)}/s`;
   }
 }
