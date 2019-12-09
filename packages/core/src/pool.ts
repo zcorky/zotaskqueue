@@ -1,5 +1,5 @@
 import { Event } from '@zodash/event';
-import { IWorker } from './worker';
+import { IWorker, Worker } from './worker';
 
 export interface IPool {
   /**
@@ -46,7 +46,7 @@ export class Pool extends Event implements IPool {
     super();
   }
 
-  public async create<P>(W: IWorker<P>, options: P) {
+  public async create<P>(W: Worker<P>, options: P) {
     const worker = new (W as any)(options);
     
     this.cache[worker.id] = worker;

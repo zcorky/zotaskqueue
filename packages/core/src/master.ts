@@ -6,7 +6,7 @@ import { strategy as createStrategy } from '@zodash/strategy';
 
 import { STATUS } from './types';
 import { Pool } from './pool';
-import { IWorker } from './worker';
+import { IWorker, Worker } from './worker';
 
 export type MasterCallback = (error: Error | null | undefined, worker: IWorker | undefined, workers: Pool) => void;
 
@@ -35,7 +35,7 @@ export interface IMaster {
    * @param W Worker Class
    * @param options Worker Options
    */
-  create<P>(W: IWorker<P>, options: P): Promise<IWorker<P>>;
+  create<P>(W: Worker<P>, options: P): Promise<IWorker<P>>;
 
   /**
    * Get Worker From Pool
@@ -306,7 +306,7 @@ export class Master implements IMaster {
     this.isUp = false;
   }
   
-  public async create<P>(W: IWorker<P>, options: P) {
+  public async create<P>(W: Worker<P>, options: P) {
     const worker = await this.workers.create(W, options);
 
     worker
