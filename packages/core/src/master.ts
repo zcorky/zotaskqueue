@@ -4,9 +4,10 @@ import { delay } from '@zodash/delay';
 import { Queue } from '@zodash/queue';
 import { strategy as createStrategy } from '@zodash/strategy';
 
-import { Worker, STATUS } from './worker';
+import { STATUS } from './types';
+import { Worker, IWorker } from './worker';
 
-export type MasterCallback = (error: Error | null | undefined, worker: Worker | undefined, workers: Worker[]) => void;
+export type MasterCallback = (error: Error | null | undefined, worker: IWorker | undefined, workers: IWorker[]) => void;
 
 export type StatusSet = Record<STATUS, Set<string>>
 export type StatusQueue = Record<STATUS.PENDING | STATUS.RUNNING, Queue<string>>;
@@ -19,7 +20,7 @@ const nextTick = async (fn: Function) => {
 export class Master {
   private readonly listeners: Record<string, MasterCallback[]> = {};
   
-  private readonly workers: Worker[] = [];
+  private readonly workers: IWorker[] = [];
   
   private readonly concurrency = 2;
   private running = 0;
@@ -39,7 +40,7 @@ export class Master {
   };
 
   // event
-  public emit(event: string | string[], error?: Error | null, worker?: Worker) {
+  public emit(event: string | string[], error?: Error | null, worker?: IWorker) {
     const events = Array.isArray(event) ? event : [event];
 
     for (const event of events) {
@@ -77,75 +78,10 @@ export class Master {
     return this.workers.reduce((all, worker) => {
       all[worker.id] = worker;
       return all;
-    }, {} as Record<string, Worker>);
+    }, {} as Record<string, IWorker>);
   }
 
-  public async get(id: string) {
-    return this.indexedWorkers[id] || null;
-  }
-
-  public async remove(id: string) {
-    const worker = await this.get(id);
-
-    if (!worker) {
-      throw new Error(`Invalid Worker ID(${id})`);
-    }
-
-    const index = this.workers.indexOf(worker);
-    this.workers.splice(index, 1);
-
-    this.emit('update');
-  }
-
-  // base
-  public async add(file: File | File[]) {
-    const files = Array.isArray(file) ? file : [file];
-
-    for (const file of files) {
-      const worker = new Worker(file);
-      
-      worker
-        .on('progress', () => this.emit(['update', 'progress'], null, worker))
-        .on('complete', () => {
-          this.emit('complete', null, worker);
-        })
-        .on('error', (error) => {
-          this.emit('error', error, worker);
-        })
-        .on('timeout', () => {
-          this.emit('timeout', null, worker);
-        })
-        .on('cancel', () => {
-          this.emit('cancel', null, worker);
-        })
-        .on('pause', () => {
-          this.emit('pause', null, worker);
-        })
-        .on('run', () => {
-          this.emit('run', null, worker);
-        })
-        .on('resume', () => {
-          this.emit(['update', 'resume'], null, worker);
-        })
-        .on('update', (error) => {
-          this.emit('update', error, worker);
-        })
-        .on('update:status', (error, worker) => {
-          // concurrency
-          this.updateStatus(worker);
-        });
-        // .on('finish', () => {
-        //   // concurrency
-        //   this.running -= 1;
-        // });
-      
-      this.workers.push(worker);
-    }
-
-    this.emit(['update', 'add']);
-  }
-
-  private updateStatus(worker: Worker) {
+  private updateStatus(worker: IWorker) {
     // remove
     if (worker.prevStatus === null) {
       //
@@ -169,7 +105,7 @@ export class Master {
     // }
 
     // create strategy
-    const strategy = createStrategy<{ worker: Worker, master: Master }, any>({
+    const strategy = createStrategy<{ worker: IWorker, master: Master }, any>({
       [STATUS.INITIALED]: ({ master }) => {},
       [STATUS.PENDING]: ({ master }) => {},
       [STATUS.RUNNING]: ({ master }) => { master.running += 1; },
@@ -190,46 +126,6 @@ export class Master {
     
     // run
     strategy({ worker, master: this });
-  }
-
-  // functions
-  public start(worker: Worker): Promise<void>
-  public start(id: string): Promise<void>
-  public async start(idOrWorker: string | Worker) {
-    // hand pending, not start, only change status
-    const worker = typeof idOrWorker === 'string'
-      ? await this.get(idOrWorker)
-      : idOrWorker;
-
-    worker.pending();
-
-    return this.parallel();
-  }
-
-  public cancel(worker: Worker): Promise<void>
-  public cancel(id: string): Promise<void>
-  public async cancel(idOrWorker: string | Worker) {
-    if (typeof idOrWorker === 'string') {
-      return (await this.get(idOrWorker)).cancel();
-    }
-
-    return idOrWorker.cancel(); 
-  }
-
-  public pause = async (id: string) => {
-    return (await this.get(id)).pause();
-  }
-
-  public resume = async (id: string) => {
-    return (await this.get(id)).resume();
-  }
-
-  public startAll = async () => {
-    return Promise.all(this.workers.map(worker => this.start(worker)));
-  }
-
-  public cancelAll = async () => {
-    return Promise.all(this.workers.map(worker => this.cancel(worker)));
   }
 
   // concurrency
@@ -283,5 +179,175 @@ export class Master {
     }
 
     // return nextTick(this.poll);
+  }
+
+  // functions
+  
+  /**
+   * Create Worker
+   * 
+   * @param W typeof Worker
+   * @param options woker options
+   */
+  public async create<O>(WorkerClass: IWorker<O>, options: O) {
+    // @TODO 'IWorker<O>' has no construct signatures.
+    return new (WorkerClass as any)(options); 
+  }
+
+  /**
+   * Get Worker (From Master) (Retrieve Worker) By ID
+   * 
+   * @param id worker id
+   */
+  public async get(id: string) {
+    return this.indexedWorkers[id] || null;
+  }
+
+  /**
+   * Remove Worker (From Master) By ID
+   * 
+   * @param id worker id
+   */
+  public async remove(id: string) {
+    const worker = await this.get(id);
+
+    if (!worker) {
+      throw new Error(`Invalid Worker ID(${id})`);
+    }
+
+    const index = this.workers.indexOf(worker);
+    this.workers.splice(index, 1);
+
+    this.emit('update');
+  }
+
+  /**
+   * Add worker
+   * 
+   * @param worker worker instance 
+   */
+  public add(worker: Worker): Promise<void>;
+  /**
+   * Add worker
+   * 
+   * @param W Worker Class
+   * @param options worker class options
+   */
+  public add<T>(W: IWorker<T>, options: T): Promise<void>;
+  public async add<T>(ClassOrInstance: IWorker<T>, options?: T) {
+    const worker = ClassOrInstance instanceof Worker ? ClassOrInstance : await this.create(ClassOrInstance, options);
+
+    worker
+        .on('progress', () => this.emit(['update', 'progress'], null, worker))
+        .on('complete', () => {
+          this.emit('complete', null, worker);
+        })
+        .on('error', (error) => {
+          this.emit('error', error, worker);
+        })
+        .on('timeout', () => {
+          this.emit('timeout', null, worker);
+        })
+        .on('cancel', () => {
+          this.emit('cancel', null, worker);
+        })
+        .on('pause', () => {
+          this.emit('pause', null, worker);
+        })
+        .on('run', () => {
+          this.emit('run', null, worker);
+        })
+        .on('resume', () => {
+          this.emit(['update', 'resume'], null, worker);
+        })
+        .on('update', (error) => {
+          this.emit('update', error, worker);
+        })
+        .on('update:status', (error, worker) => {
+          // concurrency
+          this.updateStatus(worker);
+        });
+        // .on('finish', () => {
+        //   // concurrency
+        //   this.running -= 1;
+        // });
+      
+      this.workers.push(worker);
+
+      this.emit(['update', 'add']);
+  }
+
+  /**
+   * Start Worker
+   * 
+   * @param worker worker
+   */
+  public start(worker: IWorker): Promise<void>
+  /**
+   * Start Worker with ID
+   * @param id worker id
+   */
+  public start(id: string): Promise<void>
+  public async start(idOrWorker: string | IWorker) {
+    // hand pending, not start, only change status
+    const worker = typeof idOrWorker === 'string'
+      ? await this.get(idOrWorker)
+      : idOrWorker;
+
+    worker.pending();
+
+    return this.parallel();
+  }
+
+  /**
+   * Cancel Worker
+   * 
+   * @param worker worker
+   */
+  public cancel(worker: IWorker): Promise<void>
+  /**
+   * Cancel Worker with ID
+   * @param id worker id
+   */
+  public cancel(id: string): Promise<void>
+  public async cancel(idOrWorker: string | IWorker) {
+    if (typeof idOrWorker === 'string') {
+      return (await this.get(idOrWorker)).cancel();
+    }
+
+    return idOrWorker.cancel(); 
+  }
+
+
+  /**
+   * Pause Worker @WIP
+   * 
+   * @param id worker id
+   */
+  public async pause(id: string) {
+    return (await this.get(id)).pause();
+  }
+
+  /**
+   * Resume Worker @WIP
+   * 
+   * @param id worker id
+   */
+  public resume = async (id: string) => {
+    return (await this.get(id)).resume();
+  }
+
+  /**
+   * Start All Workers
+   */
+  public async startAll() {
+    return Promise.all(this.workers.map(worker => this.start(worker)));
+  }
+
+  /**
+   * Cancel All Workers
+   */
+  public async cancelAll() {
+    return Promise.all(this.workers.map(worker => this.cancel(worker)));
   }
 }

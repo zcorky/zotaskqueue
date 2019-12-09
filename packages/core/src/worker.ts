@@ -1,42 +1,46 @@
 import { uuid } from '@zodash/uuid';
-import { md5, humanFileSize } from './utils';
+
+import { STATUS } from './types';
 
 let uniqueId = 0;
 
-export type WorkerCallback = (error: Error | null, worker: Worker) => void;
+export type WorkerCallback<P> = (error: Error | null, worker: Worker<P>) => void;
 
-export enum STATUS {
-  INITIALED = 'INITIALED',
-  PENDING = 'PENDING',
-  RUNNING = 'RUNNING',
-  COMPLETE = 'COMPLETE',
-  ERROR = 'ERROR',
-  TIMEOUT = 'TIMEOUT',
-  CANCELLED = 'CANCELLED',
-  PAUSED = 'PAUSED',
+export interface IWorker<P = any> {
+  new?(options: P): P;
+  readonly options: P;
+
+  readonly id: string;
+  readonly status: STATUS;
+  readonly prevStatus: STATUS;
+  readonly progress: number;
+  readonly speed: number;
+
+  pending(): Promise<void>;
+  run(): Promise<void>;
+  cancel(): Promise<void>;
+  pause(): Promise<void>;
+  resume(): Promise<void>;
+
+  on(event: string, cb: WorkerCallback<P>): void;
+  emit(event: string | string[], error?: Error): void;
+  off(event: string, cb: WorkerCallback<P>): void;
 }
 
-export class Worker {
-  private readonly listeners: Record<string, WorkerCallback[]> = {};
+export abstract class Worker<P = any> implements IWorker<P> {
+  private readonly listeners: Record<string, WorkerCallback<P>[]> = {};
 
   // worker
   public readonly id = 'worker-' + uniqueId++; // uuid();
-  public readonly md5: string | null = null;
   public readonly prevStatus: STATUS | null = null;
   public readonly status: STATUS = STATUS.INITIALED;
   public readonly progress = 0;
   public readonly speed: number = 0;
-  // delegate file
-  public readonly filename = this.file.name;
-  public readonly fileSize = this.file.size;
-  public readonly lastModified = this.file.lastModified;
   // mtime
   public readonly createdAt = new Date();
   public readonly updatedAt = new Date();
 
-  private readonly xhr?: XMLHttpRequest | null;
-
-  constructor(public readonly file: File) {
+  constructor(public readonly options: P) {
     this.on('run', () => {
       this.setStatus(STATUS.RUNNING);
 
@@ -78,10 +82,6 @@ export class Worker {
       .on('resume', () => {
         this.setStatus(STATUS.RUNNING);
       });
-
-    md5(file).then(v => {
-      (this as any).md5 = v;
-    });
   }
 
   public emit(event: string | string[], error?: Error) {
@@ -98,7 +98,7 @@ export class Worker {
     return this;
   }
 
-  public on(event: string, cb: WorkerCallback) {
+  public on(event: string, cb: WorkerCallback<P>) {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
@@ -107,7 +107,7 @@ export class Worker {
     return this;
   }
 
-  public off(event: string, cb: WorkerCallback) {
+  public off(event: string, cb: WorkerCallback<P>) {
     if (!this.listeners[event]) {
       return ;
     }
@@ -117,24 +117,24 @@ export class Worker {
     return this;
   }
 
-  private setProgress(progress: number) {
+  protected setProgress(progress: number) {
     (this as any).progress = progress;
 
     this.calcSpeed();
   }
 
-  private calcSpeed() {
-    const distance = this.fileSize * this.progress;
+  protected calcSpeed() {
+    const distance = this.size() * this.progress;
     const time = (+new Date() - (+this.createdAt)) / 1000; // @TODO
     // (this as any).speed = (distance / time).toFixed(2);
     this.setSpeed(distance / time);
   }
 
-  private setSpeed(speed: number) {
+  protected setSpeed(speed: number) {
     (this as any).speed = speed;
   }
 
-  private setStatus(status: STATUS) {
+  protected setStatus(status: STATUS) {
     (this as any).prevStatus = this.status;
     (this as any).status = status;
 
@@ -148,72 +148,14 @@ export class Worker {
     this.emit('update:status');
   }
 
-  public get progressHuman() {
-    return this.progress === 0 ? '-' : (this.progress * 100).toFixed(2) + '%';
-  }
-
-  public get speedHuman() {
-    return this.speed === 0 ? '-' : humanFileSize(this.speed.toFixed(2), true) + '/s';
-  }
-
   public toJSON() {
     return {
       id: this.id,
-      filename: this.file.name,
       status: this.status,
       preStatus: this.prevStatus,
       progress: this.progress,
       speed: this.speed, // === 0 ? '-' : humanFileSize(this.speed.toFixed(2), true) + '/s',
-      size: this.file.size,
-      file: this.file,
     };
-  }
-
-  private request = (file: File) => {
-    this.emit('run');
-
-    const xhr = (this as any).xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener('progress', (e) => {
-      const progress = e.loaded / e.total;
-      this.setProgress(progress);
-
-      this.emit('progress');
-    }, false);
-
-    xhr.addEventListener('load', () => {
-      this.emit('complete');
-    }, false);
-
-    xhr.addEventListener('error', (error) => {
-      this.emit('error', new Error('Network Error'));
-      // @TODO
-      // 1.Server Close Error
-      // 2.Client Network Error
-    }, false);
-
-    xhr.addEventListener('abort', () => {
-      this.emit('cancel');
-    }, false);
-
-    xhr.addEventListener('timeout', () => {
-      this.emit('timeout');
-    }, false);
-
-    // xhr.responseType = 'json';
-
-    const form = new FormData();
-    form.append('file', file);
-
-    xhr.open('POST', 'https://httpbin.zcorky.com/upload');
-
-    xhr.send(form);
-  }
-
-  public upload() {
-    this.request(this.file);
-
-    return this;
   }
 
   // functions
@@ -226,43 +168,35 @@ export class Worker {
   }
 
   public async run() {
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       if (this.status === STATUS.RUNNING) return ;
 
       const self = this;
       let it = setTimeout(() => {
-        if (this.xhr) {
-          this.xhr.abort();
-        }
-
-        reject(new Error('timeout to run'));
+        return reject(new Error('timeout to run'));
       }, 3000);
 
-      this
+      return this
         .on('run', function done() {
           clearTimeout(it);
           (it as any) = null;
           
           self.off('run', done);
-          resolve();
+          return resolve();
         })
-        .upload();
+        .handle();
     });
   }
 
   public async cancel() {
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       if (this.status !== STATUS.PENDING && this.status !== STATUS.RUNNING) {
         return ;
       }
       
       const self = this;
       let it = setTimeout(() => {
-        if (this.xhr) {
-          this.xhr.abort();
-        }
-
-        reject(new Error('timeout to cancel'));
+        return reject(new Error('timeout to cancel'));
       }, 3000);
 
       this.on('cancel', function done() {
@@ -271,17 +205,11 @@ export class Worker {
           (self as any).xhr = null;
           
           self.off('cancel', done);
-          resolve();
+          return resolve();
       });
 
       try {
-        // already run
-        if (this.xhr) {
-          this.xhr.abort();
-        } else {
-          // still pending
-          this.emit('cancel');
-        }
+        this.abort();
       } catch (error) {
         reject(error);
       }
@@ -295,4 +223,11 @@ export class Worker {
   public async resume() {
     alert('拼命开发中');
   }
+
+  // need rewrite
+  public abstract size(): number;
+
+  public abstract handle(): void;
+
+  public abstract abort(): void;
 }
