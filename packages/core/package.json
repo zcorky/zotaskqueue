@@ -1,6 +1,6 @@
 {
   "name": "@zoupdown/core",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A Simple Upload and Download Framework",
   "keywords": [
     "proxy",
