@@ -8,6 +8,7 @@ export interface Options {
   headers?: Headers;
   data?: Record<string, string>;
   withCredentials?: boolean;
+  timeout?: number;
   file: File;
 }
 
@@ -126,6 +127,10 @@ export class UploadWorker extends Worker<Options> {
     xhr.open(method, url, true);
 
     xhr.withCredentials = !!this.options.withCredentials;
+
+    if (this.options.timeout) {
+      xhr.timeout = this.options.timeout;
+    }
 
     xhr.send(form);
   }
