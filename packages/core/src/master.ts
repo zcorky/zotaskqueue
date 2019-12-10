@@ -241,9 +241,6 @@ export class Master implements IMaster {
 
   // concurrency
   private async parallel(limit: number) {
-    // already running
-    if (this.running != 0) return ;
-
     for (let i = 0; i < limit; ++i) {
       nextTick(this.poll);
     }
@@ -272,9 +269,10 @@ export class Master implements IMaster {
       // watch when = 0, queue full
       return nextTick(this.poll);
     } else if (rest < 0) {
+      // @TODO
       // throw new Error('Unexpected Error rest < 0');
       //
-      // if rest < 0, should stop current
+      // @TODO only when concurrency change, if rest < 0, should stop current
       return ;
     } else {
       // > 0
