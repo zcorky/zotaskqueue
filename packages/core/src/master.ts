@@ -272,7 +272,10 @@ export class Master implements IMaster {
       // watch when = 0, queue full
       return nextTick(this.poll);
     } else if (rest < 0) {
-      throw new Error('Unexpected Error rest < 0');
+      // throw new Error('Unexpected Error rest < 0');
+      //
+      // if rest < 0, should stop current
+      return ;
     } else {
       // > 0
       const worker = await this.next();
@@ -439,10 +442,13 @@ export class Master implements IMaster {
       throw new Error('Concurrency cannot be less than 0');
     }
 
+    const more = concurrency - this.concurrency;
     (this as any).concurrency = concurrency;
 
-    // @WIP
-    throw new Error('@WIP 拼命开发中...');
+    // if more > 0, should run more parallel process
+    if (more > 0) {
+      await this.parallel(more);
+    }
   }
 
   public async setTimeout() {
