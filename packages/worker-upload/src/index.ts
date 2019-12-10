@@ -18,6 +18,7 @@ export class UploadWorker extends Worker<Options> {
   public readonly fileSize = this.options.file.size;
   public readonly lastModified = this.options.file.lastModified;
   public readonly md5: string | null = null;
+  public readonly response: Response | null = null;
 
   private readonly xhr: XMLHttpRequest | null;
 
@@ -62,6 +63,19 @@ export class UploadWorker extends Worker<Options> {
 
     xhr.addEventListener('load', () => {
       if (xhr.readyState === 4) {
+        
+        const headers = {};
+        xhr.getAllResponseHeaders().replace(/^(.*?):[^\S\n]*([\s\S]*?)$/gm, (m, key, value) => {
+          headers[key] = headers[key] ? `${headers[key]},${value}` : value;
+          return '';
+        });
+
+        (this as any).response = new Response(xhr.responseText, {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          headers: new Headers(headers),
+        });
+
         if (xhr.status >= 200 && xhr.status < 400) {
           // health
           this.emit('complete');
