@@ -7,6 +7,7 @@ export interface Options {
   method?: string;
   headers?: Headers;
   data?: Record<string, string>;
+  withCredentials?: boolean;
   file: File;
 }
 
@@ -123,6 +124,8 @@ export class UploadWorker extends Worker<Options> {
 
     // Async Request: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Synchronous_and_Asynchronous_Requests
     xhr.open(method, url, true);
+
+    xhr.withCredentials = !!this.options.withCredentials;
 
     xhr.send(form);
   }
