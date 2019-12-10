@@ -95,7 +95,9 @@ export class UploadWorker extends Worker<Options> {
 
     const url = this.options.url;
     const method = this.options.method || DEFAULT_METHOD;
-    xhr.open(method, url);
+
+    // Async Request: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Synchronous_and_Asynchronous_Requests
+    xhr.open(method, url, true);
 
     xhr.send(form);
   }
