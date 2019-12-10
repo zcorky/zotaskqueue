@@ -61,7 +61,15 @@ export class UploadWorker extends Worker<Options> {
     }, false);
 
     xhr.addEventListener('load', () => {
-      this.emit('complete');
+      if (xhr.readyState === 4) {
+        if (xhr.status >= 200 && xhr.status < 400) {
+          // health
+          this.emit('complete');
+        } else {
+          // unhealth 400+ 500+
+          this.emit('error', new Error(`[${xhr.status}] ${xhr.statusText}`));
+        }
+      }
     }, false);
 
     xhr.addEventListener('error', (error) => {
