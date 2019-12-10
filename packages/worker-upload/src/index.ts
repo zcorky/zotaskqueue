@@ -63,7 +63,7 @@ export class UploadWorker extends Worker<Options> {
 
     xhr.addEventListener('load', () => {
       if (xhr.readyState === 4) {
-        
+
         const headers = {};
         xhr.getAllResponseHeaders().replace(/^(.*?):[^\S\n]*([\s\S]*?)$/gm, (m, key, value) => {
           headers[key] = headers[key] ? `${headers[key]},${value}` : value;
@@ -81,7 +81,10 @@ export class UploadWorker extends Worker<Options> {
           this.emit('complete');
         } else {
           // unhealth 400+ 500+
-          this.emit('error', new Error(`[${xhr.status}] ${xhr.statusText}`));
+          const error = new Error(`[${xhr.status}] ${xhr.statusText}`) as any;
+          error.status = xhr.status;
+          error.response = this.response;
+          this.emit('error', error);
         }
       }
     }, false);
