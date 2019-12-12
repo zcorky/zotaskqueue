@@ -35,7 +35,7 @@ export abstract class Worker<P = any> implements IWorker<P> {
   public readonly prevStatus: STATUS | null = null;
   public readonly status: STATUS = STATUS.INITIALED;
   public readonly progress = 0;
-  public readonly speed: number = 0;
+  // public readonly speed: number = 0;
   // mtime
   public readonly createdAt = new Date();
   public readonly updatedAt = new Date();
@@ -117,21 +117,19 @@ export abstract class Worker<P = any> implements IWorker<P> {
     return this;
   }
 
+  public get speed() {
+    const distance = this.size * this.progress;
+    const time = (+new Date() - (+this.createdAt)) / 1000;
+    return distance / time;
+  }
+
+  public get estimatedTimeToArrival() {
+    const restDistance = this.size * (1 - this.progress);
+    return restDistance / this.speed;
+  }
+
   protected setProgress(progress: number) {
     (this as any).progress = progress;
-
-    this.calcSpeed();
-  }
-
-  protected calcSpeed() {
-    const distance = this.size() * this.progress;
-    const time = (+new Date() - (+this.createdAt)) / 1000; // @TODO
-    // (this as any).speed = (distance / time).toFixed(2);
-    this.setSpeed(distance / time);
-  }
-
-  protected setSpeed(speed: number) {
-    (this as any).speed = speed;
   }
 
   protected setStatus(status: STATUS) {
@@ -235,7 +233,7 @@ export abstract class Worker<P = any> implements IWorker<P> {
   }
 
   // need rewrite
-  public abstract size(): number;
+  public abstract get size(): number;
 
   public abstract handle(): void;
 
