@@ -10,6 +10,7 @@ export interface IWorker<P = any> {
   new?(options: P): P;
   readonly options: P;
 
+  readonly version: string;
   readonly id: string;
   readonly status: STATUS;
   readonly prevStatus: STATUS;
@@ -27,7 +28,15 @@ export interface IWorker<P = any> {
   off(event: string, cb: WorkerCallback<P>): void;
 }
 
-export abstract class Worker<P = any> implements IWorker<P> {
+export interface WorkerOptions {
+  label?: string;
+  retries?: number;
+  retryAfterMs?: number;
+  retryOnError?: boolean;
+  retryOnTimeout?: boolean;
+}
+
+export abstract class Worker<P extends WorkerOptions> implements IWorker<P> {
   private readonly listeners: Record<string, WorkerCallback<P>[]> = {};
 
   // worker
@@ -35,10 +44,15 @@ export abstract class Worker<P = any> implements IWorker<P> {
   public readonly prevStatus: STATUS | null = null;
   public readonly status: STATUS = STATUS.INITIALED;
   public readonly progress = 0;
-  // public readonly speed: number = 0;
+  public readonly label = this.options.label;
   // mtime
   public readonly createdAt = new Date();
   public readonly updatedAt = new Date();
+  // options
+  public retries = this.options.retries || 0;
+  public readonly retryAfterMs = this.options.retryAfterMs || 0;
+  public readonly retryOnError = this.options.retryOnError || true;
+  public readonly retryOnTimeout = this.options.retryOnTimeout || true;
 
   constructor(public readonly options: P) {
     this.on('run', () => {
@@ -58,6 +72,11 @@ export abstract class Worker<P = any> implements IWorker<P> {
 
         // finish
         this.emit(['update', 'finish']);
+
+        // retry
+        if (this.retryOnError) {
+          this.emit('retry');
+        }
       })
       .on('timeout', () => {
         this.setStatus(STATUS.TIMEOUT);
@@ -65,6 +84,11 @@ export abstract class Worker<P = any> implements IWorker<P> {
 
         // finish
         this.emit(['update', 'finish']);
+
+        // retry
+        if (this.retryOnTimeout) {
+          this.emit('retry');
+        }
       })
       .on('cancel', () => {
         this.setStatus(STATUS.CANCELLED);
@@ -81,6 +105,15 @@ export abstract class Worker<P = any> implements IWorker<P> {
       })
       .on('resume', () => {
         this.setStatus(STATUS.RUNNING);
+      })
+      .on('retry', () => {
+        // should not retry
+        if (!this.retries || this.retries <= 0) return ;
+        
+        this.retries -= 1;
+        setTimeout(() => {
+          this.pending();
+        }, this.retryAfterMs);
       });
   }
 
@@ -115,6 +148,10 @@ export abstract class Worker<P = any> implements IWorker<P> {
     const index = this.listeners[event].indexOf(cb);
     this.listeners[event].splice(index, 1);
     return this;
+  }
+
+  public get version() {
+    return require('../package.json').version;
   }
 
   public get speed() {
