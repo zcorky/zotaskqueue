@@ -7,6 +7,7 @@ import { strategy as createStrategy } from '@zodash/strategy';
 import { STATUS } from './types';
 import { Pool } from './pool';
 import { IWorker, Worker } from './worker';
+import { version } from '_@types_babel__core@7.1.3@@types/babel__core';
 
 export type MasterCallback = (error: Error | null | undefined, worker: IWorker | undefined, workers: Pool) => void;
 
@@ -19,6 +20,11 @@ const nextTick = async (fn: Function) => {
 }
 
 export interface IMaster {
+  /**
+   * Master Runtime Version
+   */
+  readonly version: string;
+
   /**
    * Start Up
    */
@@ -132,6 +138,10 @@ export interface MasterOptions {
 }
 
 export class Master implements IMaster {
+  public get version() {
+    return require('../package.json').version;
+  }
+
   private readonly listeners: Record<string, MasterCallback[]> = {};
   
   private readonly concurrency = this.options.concurrency || 2;
