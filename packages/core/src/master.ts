@@ -11,7 +11,7 @@ import { IWorker, Worker } from './worker';
 export type MasterCallback = (error: Error | null | undefined, worker: IWorker | undefined, workers: Pool) => void;
 
 export type StatusSet = Record<STATUS, Set<string>>
-export type StatusQueue = Record<STATUS.PENDING | STATUS.RUNNING, Queue<string>>;
+export type StatusQueue = Record<STATUS.PENDING | STATUS.RUNNING | STATUS.RETRYING, Queue<string>>;
 
 const nextTick = async (fn: Function) => {
   await delay(300);
@@ -150,10 +150,12 @@ export class Master implements IMaster {
     [STATUS.TIMEOUT]: new Set(),
     [STATUS.CANCELLED]: new Set(),
     [STATUS.PAUSED]: new Set(),
+    [STATUS.RETRYING]: new Set(), // @TODO
   };
   public readonly queue: StatusQueue = {
     [STATUS.PENDING]: new Queue<string>(Infinity),
     [STATUS.RUNNING]: new Queue<string>(this.concurrency),
+    [STATUS.RETRYING]: new Queue<string>(Infinity),
   };
 
   constructor(public readonly options: MasterOptions = {}) {}

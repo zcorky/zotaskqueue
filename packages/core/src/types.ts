@@ -8,4 +8,6 @@ export enum STATUS {
   TIMEOUT = 'TIMEOUT',
   CANCELLED = 'CANCELLED',
   PAUSED = 'PAUSED',
+  //
+  RETRYING = 'RETRYING',
 }
