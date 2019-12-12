@@ -1,8 +1,8 @@
-import { Worker } from '@zoupdown/core';
+import { Worker, WorkerOptions } from '@zoupdown/core';
 
 import { md5, humanFileSize } from './utils';
 
-export interface Options {
+export interface Options extends WorkerOptions {
   url: string;
   method?: string;
   headers?: Headers;
