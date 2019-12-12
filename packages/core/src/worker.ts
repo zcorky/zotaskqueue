@@ -10,6 +10,7 @@ export interface IWorker<P = any> {
   new?(options: P): P;
   readonly options: P;
 
+  readonly version: string;
   readonly id: string;
   readonly status: STATUS;
   readonly prevStatus: STATUS;
@@ -29,7 +30,6 @@ export interface IWorker<P = any> {
 
 export interface WorkerOptions {
   label?: string;
-  version?: string;
   retries?: number;
   retryAfterMs?: number;
   retryOnError?: boolean;
@@ -45,8 +45,6 @@ export abstract class Worker<P extends WorkerOptions> implements IWorker<P> {
   public readonly status: STATUS = STATUS.INITIALED;
   public readonly progress = 0;
   public readonly label = this.options.label;
-  public readonly version = this.options.version;
-  // public readonly speed: number = 0;
   // mtime
   public readonly createdAt = new Date();
   public readonly updatedAt = new Date();
@@ -150,6 +148,10 @@ export abstract class Worker<P extends WorkerOptions> implements IWorker<P> {
     const index = this.listeners[event].indexOf(cb);
     this.listeners[event].splice(index, 1);
     return this;
+  }
+
+  public get version() {
+    return require('../package.json').version;
   }
 
   public get speed() {
