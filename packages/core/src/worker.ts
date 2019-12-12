@@ -28,7 +28,8 @@ export interface IWorker<P = any> {
 }
 
 export interface WorkerOptions {
-  name?: string;
+  label?: string;
+  version?: string;
   retries?: number;
   retryAfterMs?: number;
   retryOnError?: boolean;
@@ -43,6 +44,8 @@ export abstract class Worker<P extends WorkerOptions> implements IWorker<P> {
   public readonly prevStatus: STATUS | null = null;
   public readonly status: STATUS = STATUS.INITIALED;
   public readonly progress = 0;
+  public readonly label = this.options.label;
+  public readonly version = this.options.version;
   // public readonly speed: number = 0;
   // mtime
   public readonly createdAt = new Date();
