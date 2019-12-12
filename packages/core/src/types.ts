@@ -9,5 +9,5 @@ export enum STATUS {
   CANCELLED = 'CANCELLED',
   PAUSED = 'PAUSED',
   //
-  RETRYING = 'RETRYING',
+  // RETRYING = 'RETRYING',
 }
