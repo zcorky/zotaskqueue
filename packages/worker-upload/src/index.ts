@@ -39,15 +39,16 @@ export class UploadWorker extends Worker<Options> {
       status: this.status,
       preStatus: this.prevStatus,
       progress: this.progress,
+      size: this.size,
       speed: this.speed, // === 0 ? '-' : humanFileSize(this.speed.toFixed(2), true) + '/s',
-      size: this.fileSize,
+      eta: this.estimatedTimeToArrival,
       file: this.options.file,
       filename: this.filename,
       md5: this.md5,
     };
   }
 
-  public size() {
+  public get size() {
     return this.fileSize;
   }
 

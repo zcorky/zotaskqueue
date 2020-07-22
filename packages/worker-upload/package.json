@@ -1,6 +1,6 @@
 {
   "name": "@zoupdown/worker-upload",
-  "version": "0.0.10",
+  "version": "0.0.12",
   "description": "A Simple Upload and Download Framework",
   "keywords": [
     "zoupdown",
@@ -72,7 +72,7 @@
   },
   "dependencies": {
     "@types/spark-md5": "^3.0.2",
-    "@zoupdown/core": "^0.0.10",
+    "@zoupdown/core": "^0.0.12",
     "spark-md5": "^3.0.0"
   }
 }
