@@ -20,6 +20,11 @@ const nextTick = async (fn: Function) => {
 
 export interface IMaster {
   /**
+   * is up
+   */
+  isUp: boolean;
+
+  /**
    * Start Up
    */
   startup(): Promise<void>;
@@ -136,7 +141,7 @@ export class Master implements IMaster {
   
   private readonly concurrency = this.options.concurrency || 2;
 
-  private isUp = false;
+  private _isUp = false;
 
   private readonly workers = new Pool({ capacity: Infinity });
 
@@ -157,6 +162,10 @@ export class Master implements IMaster {
   };
 
   constructor(public readonly options: MasterOptions = {}) {}
+
+  public get isUp() {
+    return this._isUp;
+  }
 
   // event
   public emit(event: string | string[], error?: Error | null, worker?: IWorker) {
@@ -263,7 +272,7 @@ export class Master implements IMaster {
     const rest = this.concurrency - this.running;
 
     // if shutdown, stop nextTick
-    if (!this.isUp) {
+    if (!this._isUp) {
       return ;
     } else if (rest === 0) {
       // watch when = 0, queue full
@@ -298,13 +307,13 @@ export class Master implements IMaster {
 
   // functions
   public async startup() {
-    this.isUp = true;
+    this._isUp = true;
 
     await this.parallel(this.concurrency);
   }
 
   public async shutdown() {
-    this.isUp = false;
+    this._isUp = false;
   }
   
   public async create<P>(W: Worker<P>, options: P) {
@@ -379,7 +388,7 @@ export class Master implements IMaster {
   }
 
   public async execute(id: string) {
-    if (!this.isUp) {
+    if (!this._isUp) {
       throw new Error(`Your machine is not start up, please startup first.`);
     }
 
