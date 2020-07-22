@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.0.13](https://github.com/zcorky/zodash/compare/v0.0.12...v0.0.13) (2020-07-22)
+
+
+### Bug Fixes
+
+* **core:** export master.isUp ([9175cc7](https://github.com/zcorky/zodash/commit/9175cc7ab8a2da2f7629bad0304a8682da2ec871))
+
+
+
+
+
 ## [0.0.12](https://github.com/zcorky/zodash/compare/v0.0.11...v0.0.12) (2019-12-12)
 
 **Note:** Version bump only for package @zoupdown/core
